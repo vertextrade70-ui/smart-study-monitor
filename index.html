@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Smart Study Monitor</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#071321;
+  color:white;
+  text-align:center;
+}
+
+.header{
+  background:#102943;
+  padding:22px 12px;
+}
+
+.header h1{
+  margin:0;
+  font-size:28px;
+}
+
+.header p{
+  margin:8px 0 0;
+  color:#a9c0d8;
+}
+
+.container{
+  width:94%;
+  max-width:650px;
+  margin:18px auto;
+}
+
+.camera-box{
+  position:relative;
+  width:100%;
+  background:#000;
+  border:2px solid #315579;
+  border-radius:18px;
+  overflow:hidden;
+  min-height:250px;
+}
+
+#camera{
+  width:100%;
+  display:block;
+  transform:scaleX(-1);
+  background:#000;
+}
+
+.camera-placeholder{
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  color:#9db3c8;
+  font-size:18px;
+  padding:20px;
+}
+
+.status{
+  margin-top:15px;
+  padding:16px;
+  border-radius:14px;
+  background:#102943;
+  font-size:17px;
+  font-weight:bold;
+}
+
+.good{
+  color:#55e38a;
+}
+
+.warning{
+  color:#ffd166;
+}
+
+.danger{
+  color:#ff5555;
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:13px;
+  padding:16px;
+  margin-top:12px;
+  font-size:17px;
+  font-weight:bold;
+  color:white;
+  background:#1687ff;
+}
+
+button:active{
+  transform:scale(.98);
+}
+
+.stop-button{
+  background:#26384d;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:12px;
+}
+
+.stat{
+  background:#102943;
+  border-radius:14px;
+  padding:16px 8px;
+}
+
+.stat-title{
+  font-size:16px;
+}
+
+.stat-value{
+  display:block;
+  margin-top:8px;
+  font-size:19px;
+  font-weight:bold;
+}
+
+.info{
+  margin-top:15px;
+  padding:16px;
+  border-radius:14px;
+  background:#0d2034;
+  text-align:left;
+  line-height:1.65;
+  color:#c8d8e7;
+}
+
+.info b{
+  color:white;
+}
+
+.small{
+  margin-top:12px;
+  color:#8198ad;
+  font-size:13px;
+}
+
+/* ALARM */
+
+#alarmScreen{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:rgba(150,0,0,.96);
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  padding:20px;
+}
+
+#alarmScreen h2{
+  font-size:42px;
+  margin:10px 0;
+}
+
+#alarmScreen p{
+  font-size:19px;
+  max-width:400px;
+}
+
+.alarm-stop{
+  width:85%;
+  max-width:360px;
+  background:white;
+  color:#c40000;
+}
+
+/* LOADING */
+
+#loading{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.85);
+  z-index:8000;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+
+.loader{
+  width:45px;
+  height:45px;
+  border:5px solid #555;
+  border-top:5px solid white;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>📚 Smart Study Monitor</h1>
+  <p>AI Study Focus Assistant</p>
+</div>
+
+<div class="container">
+
+  <div class="camera-box">
+
+    <video
+      id="camera"
+      autoplay
+      playsinline
+      muted>
+    </video>
+
+    <div
+      id="cameraPlaceholder"
+      class="camera-placeholder">
+      📷 Camera is not started
+    </div>
+
+  </div>
+
+
+  <div
+    id="status"
+    class="status warning">
+
+    Press START MONITORING
+
+  </div>
+
+
+  <button
+    id="startButton"
+    onclick="startMonitor()">
+
+    ▶ START MONITORING
+
+  </button>
+
+
+  <button
+    class="stop-button"
+    onclick="stopMonitor()">
+
+    ■ STOP MONITORING
+
+  </button>
+
+
+  <div class="stats">
+
+    <div class="stat">
+
+      <div class="stat-title">
+        👤 Face
+      </div>
+
+      <span
+        id="faceStatus"
+        class="stat-value">
+        ---
+      </span>
+
+    </div>
+
+
+    <div class="stat">
+
+      <div class="stat-title">
+        👁 Eyes
+      </div>
+
+      <span
+        id="eyeStatus"
+        class="stat-value">
+        ---
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <div class="info">
+
+    <b>How it works</b><br><br>
+
+    👤 Face detection checks whether you are
+    sitting in front of the camera.<br>
+
+    👁 Eye detection checks whether your eyes
+    stay closed for too long.<br>
+
+    🔊 A warning alarm is produced when a
+    problem is detected.<br>
+
+    ✅ Normal blinking is ignored.
+
+  </div>
+
+
+  <div class="small">
+
+    Camera access requires browser permission
+    and an HTTPS website.
+
+  </div>
+
+</div>
+
+
+<!-- ALARM SCREEN -->
+
+<div id="alarmScreen">
+
+  <h2>⚠️ WAKE UP!</h2>
+
+  <p id="alarmMessage">
+    Please focus on your study.
+  </p>
+
+  <button
+    class="alarm-stop"
+    onclick="stopAlarm()">
+
+    🔕 STOP ALARM
+
+  </button>
+
+</div>
+
+
+<!-- LOADING SCREEN -->
+
+<div id="loading">
+
+  <div class="loader"></div>
+
+  <p id="loadingText">
+    Loading AI...
+  </p>
+
+</div>
+
+
+<script type="module">
+
+/*
+====================================================
+SMART STUDY MONITOR
+PART 1
+====================================================
+
+Part 2 will be pasted immediately below this code.
+Do NOT close the HTML file before Part 2.
+*/
+
+
+/* MEDIAPIPE */
+
+import {
+  FaceLandmarker,
+  FilesetResolver
+} from
+"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/+esm";
+
+
+/* ELEMENTS */
+
+const video =
+  document.getElementById("camera");
+
+const statusBox =
+  document.getElementById("status");
+
+const faceStatus =
+  document.getElementById("faceStatus");
+
+const eyeStatus =
+  document.getElementById("eyeStatus");
+
+const alarmScreen =
+  document.getElementById("alarmScreen");
+
+const alarmMessage =
+  document.getElementById("alarmMessage");
+
+const loading =
+  document.getElementById("loading");
+
+const loadingText =
+  document.getElementById("loadingText");
+
+const cameraPlaceholder =
+  document.getElementById("cameraPlaceholder");
+
+const startButton =
+  document.getElementById("startButton");
+
+
+/* VARIABLES */
+
+let faceLandmarker = null;
+
+let cameraStream = null;
+
+let monitoring = false;
+
+let audioContext = null;
+
+let alarmInterval = null;
+
+let faceMissingStart = null;
+
+let eyesClosedStart = null;
+
+let previousVideoTime = -1;
+
+
+/* SETTINGS */
+
+/*
+  Face must be missing for this long
+  before alarm.
+*/
+
+const FACE_MISSING_DELAY = 1800;
+
+
+/*
+  Eyes must stay closed for this long.
+  Short blinking is ignored.
+*/
+
+const EYES_CLOSED_DELAY = 1500;
+
+
+/*
+  Eye-blink confidence threshold.
+*/
+
+const EYE_CLOSED_THRESHOLD = 0.55;
+
+
+/* SHOW LOADING */
+
+function showLoading(message){
+
+  loadingText.innerText = message;
+
+  loading.style.display = "flex";
+}
+
+
+/* HIDE LOADING */
+
+function hideLoading(){
+
+  loading.style.display = "none";
+}
+
+
+/* STATUS */
+
+function setStatus(message,type){
+
+  statusBox.innerText = message;
+
+  statusBox.className =
+    "status " + type;
+}
+
+
+/* LOAD AI MODEL */
+
+async function loadAI(){
+
+  showLoading(
+    "Loading AI face detection..."
+  );
+
+  setStatus(
+    "⏳ Loading AI model...",
+    "warning"
+  );
+
+
+  const vision =
+    await FilesetResolver.forVisionTasks(
+
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm"
+
+    );
+
+
+  faceLandmarker =
+    await FaceLandmarker.createFromOptions(
+
+      vision,
+
+      {
+
+        baseOptions:{
+
+          modelAssetPath:
+
+          "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+
+        },
+
+
+        runningMode:"VIDEO",
+
+
+        numFaces:1,
+
+
+        minFaceDetectionConfidence:
+          0.55,
+
+
+        minFacePresenceConfidence:
+          0.55,
+
+
+        minTrackingConfidence:
+          0.55,
+
+
+        outputFaceBlendshapes:true
+
+      }
+
+    );
+
+
+  hideLoading();
+
+
+  setStatus(
+    "✅ AI ready",
+    "good"
+  );
+}
+
+
+/* OPEN CAMERA */
+
+async function openCamera(){
+
+  if(
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ){
+
+    throw new Error(
+      "Camera API is not available"
+    );
+
+  }
+
+
+  cameraStream =
+    await navigator.mediaDevices.getUserMedia({
+
+      video:{
+
+        facingMode:"user",
+
+        width:{
+          ideal:640
+        },
+
+        height:{
+          ideal:480
+        }
+
+      },
+
+      audio:false
+
+    });
+
+
+  video.srcObject =
+    cameraStream;
+
+
+  await video.play();
+
+
+  cameraPlaceholder.style.display =
+    "none";
+}
+
+
+/* AUDIO SETUP */
+
+function setupAudio(){
+
+  if(!audioContext){
+
+    audioContext =
+      new (
+        window.AudioContext ||
+        window.webkitAudioContext
+      )();
+
+  }
+
+
+  if(
+    audioContext.state ===
+    "suspended"
+  ){
+
+    audioContext.resume();
+
+  }
+}
+
+
+/* TEST SOUND */
+
+function makeAlarmSound(){
+
+  if(!audioContext){
+    return;
+  }
+
+
+  const oscillator =
+    audioContext.createOscillator();
+
+
+  const gain =
+    audioContext.createGain();
+
+
+  oscillator.type =
+    "square";
+
+
+  oscillator.frequency.setValueAtTime(
+    950,
+    audioContext.currentTime
+  );
+
+
+  gain.gain.setValueAtTime(
+    0.0001,
+    audioContext.currentTime
+  );
+
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.8,
+    audioContext.currentTime + 0.03
+  );
+
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    audioContext.currentTime + 0.35
+  );
+
+
+  oscillator.connect(gain);
+
+  gain.connect(
+    audioContext.destination
+  );
+
+
+  oscillator.start();
+
+
+  oscillator.stop(
+    audioContext.currentTime + 0.36
+  );
+}
+
+
+/* GET EYE BLINK SCORE */
+
+function getBlendshapeScore(
+  result,
+  name
+){
+
+  if(
+    !result.faceBlendshapes ||
+    result.faceBlendshapes.length === 0
+  ){
+
+    return 0;
+
+  }
+
+
+  const categories =
+    result.faceBlendshapes[0]
+      .categories;
+
+
+  for(
+    const item of categories
+  ){
+
+    if(
+      item.categoryName === name
+    ){
+
+      return item.score || 0;
+
+    }
+
+  }
+
+
+  return 0;
+}
+
+
+/*
+====================================================
+PART 2 WILL CONTINUE HERE
+====================================================
+*//* ==================================================
+   PART 2 — SMART STUDY MONITOR
+   ================================================== */
+
+
+/* START MONITOR */
+
+window.startMonitor = async function(){
+
+  try{
+
+    setupAudio();
+
+    startButton.disabled = true;
+
+    startButton.innerText =
+      "⏳ STARTING...";
+
+
+    /*
+      Load AI model first
+    */
+
+    if(!faceLandmarker){
+
+      await loadAI();
+
+    }
+
+
+    /*
+      Open front camera
+    */
+
+    if(!cameraStream){
+
+      await openCamera();
+
+    }
+
+
+    monitoring = true;
+
+    startButton.disabled = false;
+
+    startButton.innerText =
+      "🟢 MONITORING ACTIVE";
+
+
+    setStatus(
+      "🟢 Monitoring started",
+      "good"
+    );
+
+
+    /*
+      Start detection loop
+    */
+
+    detectLoop();
+
+
+  }catch(error){
+
+    console.error(
+      "Smart Study Monitor Error:",
+      error
+    );
+
+
+    hideLoading();
+
+
+    startButton.disabled = false;
+
+    startButton.innerText =
+      "▶ START MONITORING";
+
+
+    setStatus(
+      "❌ Camera could not start",
+      "danger"
+    );
+
+
+    alert(
+      "Camera open nahi ho paayi.\n\n" +
+      "1. Browser camera permission Allow karo.\n" +
+      "2. Website HTTPS par open honi chahiye.\n" +
+      "3. Agar permission pehle Block ki hai, " +
+      "Chrome site settings mein Camera ko Allow karo."
+    );
+
+  }
+
+};
+
+
+/* ==================================================
+   DETECTION LOOP
+   ================================================== */
+
+function detectLoop(){
+
+  if(!monitoring){
+    return;
+  }
+
+
+  if(video.readyState < 2){
+
+    requestAnimationFrame(
+      detectLoop
+    );
+
+    return;
+  }
+
+
+  /*
+    Process only when a new video frame
+    is available.
+  */
+
+  if(
+    video.currentTime !==
+    previousVideoTime
+  ){
+
+    previousVideoTime =
+      video.currentTime;
+
+
+    try{
+
+      const result =
+        faceLandmarker.detectForVideo(
+          video,
+          performance.now()
+        );
+
+
+      analyseResult(result);
+
+
+    }catch(error){
+
+      console.log(
+        "Detection error:",
+        error
+      );
+
+    }
+
+  }
+
+
+  requestAnimationFrame(
+    detectLoop
+  );
+
+}
+
+
+/* ==================================================
+   ANALYSE FACE + EYES
+   ================================================== */
+
+function analyseResult(result){
+
+  const faceFound =
+    result.faceLandmarks &&
+    result.faceLandmarks.length > 0;
+
+
+  /* -----------------------------------------------
+     FACE NOT FOUND
+     ----------------------------------------------- */
+
+  if(!faceFound){
+
+    faceStatus.innerText =
+      "❌ NOT FOUND";
+
+    faceStatus.className =
+      "stat-value danger";
+
+
+    eyeStatus.innerText =
+      "---";
+
+
+    /*
+      Start face-missing timer
+    */
+
+    if(faceMissingStart === null){
+
+      faceMissingStart =
+        performance.now();
+
+    }
+
+
+    const missingDuration =
+      performance.now() -
+      faceMissingStart;
+
+
+    setStatus(
+      "⚠️ FACE NOT DETECTED",
+      "danger"
+    );
+
+
+    /*
+      Don't immediately alarm.
+      This prevents alarms caused by
+      very short tracking losses.
+    */
+
+    if(
+      missingDuration >=
+      FACE_MISSING_DELAY
+    ){
+
+      startAlarm(
+        "Your face is not visible. Please sit properly in front of the camera."
+      );
+
+    }
+
+
+    return;
+  }
+
+
+  /* -----------------------------------------------
+     FACE FOUND
+     ----------------------------------------------- */
+
+  faceMissingStart = null;
+
+
+  faceStatus.innerText =
+    "✅ DETECTED";
+
+  faceStatus.className =
+    "stat-value good";
+
+
+  /* -----------------------------------------------
+     EYE BLINK VALUES
+     ----------------------------------------------- */
+
+  const leftEye =
+    getBlendshapeScore(
+      result,
+      "eyeBlinkLeft"
+    );
+
+
+  const rightEye =
+    getBlendshapeScore(
+      result,
+      "eyeBlinkRight"
+    );
+
+
+  const bothEyesClosed =
+    leftEye >
+    EYE_CLOSED_THRESHOLD &&
+    rightEye >
+    EYE_CLOSED_THRESHOLD;
+
+
+  /* -----------------------------------------------
+     EYES CLOSED
+     ----------------------------------------------- */
+
+  if(bothEyesClosed){
+
+    eyeStatus.innerText =
+      "😴 CLOSED";
+
+    eyeStatus.className =
+      "stat-value danger";
+
+
+    if(eyesClosedStart === null){
+
+      eyesClosedStart =
+        performance.now();
+
+    }
+
+
+    const closedDuration =
+      performance.now() -
+      eyesClosedStart;
+
+
+    setStatus(
+      "😴 EYES CLOSED",
+      "warning"
+    );
+
+
+    /*
+      Short blink is ignored.
+      Longer closure triggers alarm.
+    */
+
+    if(
+      closedDuration >=
+      EYES_CLOSED_DELAY
+    ){
+
+      startAlarm(
+        "Your eyes have been closed for too long. Please stay focused."
+      );
+
+    }
+
+
+  }else{
+
+    /* ---------------------------------------------
+       EYES OPEN
+       --------------------------------------------- */
+
+    eyesClosedStart = null;
+
+
+    eyeStatus.innerText =
+      "👀 OPEN";
+
+    eyeStatus.className =
+      "stat-value good";
+
+
+    setStatus(
+      "🟢 STUDYING — FOCUS DETECTED",
+      "good"
+    );
+
+
+    /*
+      If the student is back to normal,
+      stop the alarm.
+    */
+
+    stopAlarm();
+
+  }
+
+}
+
+
+/* ==================================================
+   START ALARM
+   ================================================== */
+
+function startAlarm(reason){
+
+  if(!monitoring){
+    return;
+  }
+
+
+  alarmMessage.innerText =
+    reason;
+
+
+  alarmScreen.style.display =
+    "flex";
+
+
+  /*
+    Prevent multiple alarm timers.
+  */
+
+  if(alarmInterval !== null){
+    return;
+  }
+
+
+  /*
+    First sound immediately
+  */
+
+  makeAlarmSound();
+
+
+  /*
+    Repeat sound
+  */
+
+  alarmInterval =
+    setInterval(
+      function(){
+
+        if(monitoring){
+
+          makeAlarmSound();
+
+        }
+
+      },
+      500
+    );
+
+}
+
+
+/* ==================================================
+   STOP ALARM
+   ================================================== */
+
+window.stopAlarm = function(){
+
+  alarmScreen.style.display =
+    "none";
+
+
+  if(alarmInterval !== null){
+
+    clearInterval(
+      alarmInterval
+    );
+
+    alarmInterval = null;
+
+  }
+
+};
+
+
+/* ==================================================
+   STOP MONITOR
+   ================================================== */
+
+window.stopMonitor = function(){
+
+  monitoring = false;
+
+
+  stopAlarm();
+
+
+  /*
+    Stop camera completely
+  */
+
+  if(cameraStream){
+
+    cameraStream
+      .getTracks()
+      .forEach(
+        function(track){
+
+          track.stop();
+
+        }
+      );
+
+    cameraStream = null;
+
+  }
+
+
+  video.srcObject = null;
+
+
+  cameraPlaceholder.style.display =
+    "block";
+
+
+  faceStatus.innerText =
+    "---";
+
+  faceStatus.className =
+    "stat-value";
+
+
+  eyeStatus.innerText =
+    "---";
+
+  eyeStatus.className =
+    "stat-value";
+
+
+  setStatus(
+    "⏹ Monitoring stopped",
+    "warning"
+  );
+
+
+  startButton.disabled =
+    false;
+
+  startButton.innerText =
+    "▶ START MONITORING";
+
+};
+
+
+/* ==================================================
+   CLEANUP
+   ================================================== */
+
+window.addEventListener(
+  "beforeunload",
+  function(){
+
+    if(cameraStream){
+
+      cameraStream
+        .getTracks()
+        .forEach(
+          function(track){
+
+            track.stop();
+
+          }
+        );
+
+    }
+
+  }
+);
+
+
+/* ==================================================
+   END OF SMART STUDY MONITOR
+   ================================================== */
+
+</script>
+
+</body>
+</html>
